@@ -18,12 +18,14 @@
 
 body{
   margin:0;
-  font-family:Inter, Arial, sans-serif;
+  font-family: Inter, Arial, sans-serif;
   background:linear-gradient(180deg,#f7fdfb,#fdf3f7);
   padding:40px 24px;
 }
 
-.wrapper{ width:360px; }
+.wrapper{
+  width:360px;
+}
 
 .card{
   background:var(--card);
@@ -46,6 +48,7 @@ h1{
   text-align:center;
   color:var(--mint);
 }
+
 .subtitle{
   text-align:center;
   font-size:14px;
@@ -63,7 +66,11 @@ h1{
   color:#4b7f79;
   margin-bottom:12px;
 }
-.clock .colon{ animation:blink 1s infinite; }
+
+.clock .colon{
+  animation:blink 1s infinite;
+}
+
 @keyframes blink{
   0%,50%,100%{opacity:1}
   25%,75%{opacity:.2}
@@ -76,6 +83,7 @@ h1{
   border-radius:999px;
   overflow:hidden;
 }
+
 .progress div{
   height:100%;
   background:linear-gradient(90deg,var(--mint),var(--pink));
@@ -102,6 +110,7 @@ h1{
   margin-top:14px;
   flex-wrap:wrap;
 }
+
 .badge{
   padding:6px 12px;
   border-radius:999px;
@@ -110,6 +119,7 @@ h1{
   color:#4c8f88;
   opacity:.35;
 }
+
 .badge.active{
   opacity:1;
   background:linear-gradient(90deg,var(--mint),var(--lilac));
@@ -127,9 +137,10 @@ h1{
   max-height:140px;
   overflow:auto;
 }
+
 .history ul{
-  padding-left:14px;
   margin:6px 0 0;
+  padding-left:16px;
 }
 
 /* botão */
@@ -163,7 +174,9 @@ button{
   <span id="ss">00</span>
 </div>
 
-<div class="progress"><div id="progressBar"></div></div>
+<div class="progress">
+  <div id="progressBar"></div>
+</div>
 
 <div class="stats">
   <div>🏆 Recorde<br><strong id="record">0</strong></div>
@@ -189,48 +202,60 @@ button{
 </div>
 
 <script>
-/* CONFIG */
+/* =========================
+   CONFIGURAÇÃO
+========================= */
 const START_DATE = new Date("2026-01-01T00:00:00").getTime();
-const GOAL = 365;
 const DAY = 86400000;
+const GOAL = 365;
 
 const STORAGE = {
-  start:"ns_start",
-  inclusive:"ns_inclusive",
-  record:"ns_record",
-  resets:"ns_resets",
-  history:"ns_history",
-  init:"ns_init"
+  start: "ns_start",
+  inclusive: "ns_inclusive",
+  record: "ns_record",
+  resets: "ns_resets",
+  history: "ns_history",
+  init: "ns_init"
 };
 
-/* util */
+/* =========================
+   UTIL
+========================= */
 const daysBetween = ms => Math.floor(ms / DAY);
 
-/* init */
+/* =========================
+   INIT (uma única vez)
+========================= */
 function init(){
   if(localStorage.getItem(STORAGE.init)) return;
+
   localStorage.setItem(STORAGE.start, START_DATE);
-  localStorage.setItem(STORAGE.inclusive, "true");
-  localStorage.setItem(STORAGE.record, 0);
-  localStorage.setItem(STORAGE.resets, 0);
+  localStorage.setItem(STORAGE.inclusive, "true"); // contagem inclusiva
+  localStorage.setItem(STORAGE.record, "0");
+  localStorage.setItem(STORAGE.resets, "0");
   localStorage.setItem(STORAGE.history, "[]");
   localStorage.setItem(STORAGE.init, "true");
 }
 
-/* animação número */
+/* =========================
+   ANIMAÇÃO DO NÚMERO
+========================= */
 function animateNumber(el, to){
-  const from = Number(el.innerText)||0;
+  const from = Number(el.innerText) || 0;
   const start = performance.now();
   const duration = 500;
+
   function frame(t){
-    const p = Math.min((t-start)/duration,1);
-    el.innerText = Math.floor(from+(to-from)*p);
-    if(p<1) requestAnimationFrame(frame);
+    const p = Math.min((t - start) / duration, 1);
+    el.innerText = Math.floor(from + (to - from) * p);
+    if(p < 1) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
 
-/* relógio */
+/* =========================
+   RELÓGIO
+========================= */
 function updateClock(){
   const n = new Date();
   hh.textContent = String(n.getHours()).padStart(2,"0");
@@ -238,12 +263,32 @@ function updateClock(){
   ss.textContent = String(n.getSeconds()).padStart(2,"0");
 }
 
-/* update */
+/* =========================
+   HISTÓRICO
+========================= */
+function renderHistory(){
+  const list = JSON.parse(localStorage.getItem(STORAGE.history));
+  if(list.length === 0){
+    historyEl.textContent = "🎉 Nenhum gasto registrado até agora";
+    return;
+  }
+
+  historyEl.innerHTML =
+    "<strong>Histórico de gastos</strong><ul>" +
+    list.map(h =>
+      `<li>${h.date} — ${h.item} (R$ ${h.value})</li>`
+    ).join("") +
+    "</ul>";
+}
+
+/* =========================
+   UPDATE PRINCIPAL
+========================= */
 function update(){
   const start = Number(localStorage.getItem(STORAGE.start));
-  const inclusive = localStorage.getItem(STORAGE.inclusive)==="true";
+  const inclusive = localStorage.getItem(STORAGE.inclusive) === "true";
 
-  let days = daysBetween(Date.now()-start);
+  let days = daysBetween(Date.now() - start);
   if(inclusive) days += 1;
 
   animateNumber(counter, days);
@@ -258,53 +303,50 @@ function update(){
   resetsEl.textContent = localStorage.getItem(STORAGE.resets);
 
   progressBar.style.width =
-    Math.min((days/GOAL)*100,100)+"%";
+    Math.min((days / GOAL) * 100, 100) + "%";
 
-  document.querySelectorAll(".badge").forEach(b=>{
-    if(days >= Number(b.dataset.days)) b.classList.add("active");
+  document.querySelectorAll(".badge").forEach(b => {
+    if(days >= Number(b.dataset.days)){
+      b.classList.add("active");
+    }
   });
 
   renderHistory();
 }
 
-/* histórico */
-function renderHistory(){
-  const list = JSON.parse(localStorage.getItem(STORAGE.history));
-  if(list.length===0){
-    historyEl.textContent = "🎉 Nenhum gasto registrado até agora";
-    return;
-  }
-  historyEl.innerHTML = "<strong>Histórico de gastos</strong><ul>"+
-    list.map(h=>`<li>${h.date} — ${h.item} (R$ ${h.value})</li>`).join("")
-    +"</ul>";
-}
-
-/* reset real */
+/* =========================
+   RESET REAL
+========================= */
 function panic(){
   const item = prompt("O que você comprou?");
   if(!item) return;
+
   const value = prompt("Qual foi o valor?");
   if(!value) return;
 
   const now = Date.now();
 
-  const list = JSON.parse(localStorage.getItem(STORAGE.history));
-  list.unshift({
-    date:new Date(now).toLocaleDateString("pt-BR"),
-    item,value
+  const history = JSON.parse(localStorage.getItem(STORAGE.history));
+  history.unshift({
+    date: new Date(now).toLocaleDateString("pt-BR"),
+    item,
+    value
   });
 
-  localStorage.setItem(STORAGE.history, JSON.stringify(list));
+  localStorage.setItem(STORAGE.history, JSON.stringify(history));
   localStorage.setItem(STORAGE.start, now);
   localStorage.setItem(STORAGE.inclusive, "false");
-  localStorage.setItem(STORAGE.resets,
-    Number(localStorage.getItem(STORAGE.resets))+1
+  localStorage.setItem(
+    STORAGE.resets,
+    String(Number(localStorage.getItem(STORAGE.resets)) + 1)
   );
 
   update();
 }
 
-/* DOM */
+/* =========================
+   DOM
+========================= */
 const counter = document.getElementById("counter");
 const recordEl = document.getElementById("record");
 const resetsEl = document.getElementById("resets");
@@ -314,12 +356,14 @@ const hh = document.getElementById("hh");
 const mm = document.getElementById("mm");
 const ss = document.getElementById("ss");
 
-/* boot */
+/* =========================
+   BOOT
+========================= */
 init();
 update();
 updateClock();
-setInterval(updateClock,1000);
-setInterval(update,60000);
+setInterval(updateClock, 1000);
+setInterval(update, 60000);
 </script>
 
 </body>
