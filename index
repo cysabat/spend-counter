@@ -15,37 +15,45 @@
   --muted:#6b9b95;
   --danger:#ef6f6f;
 }
+
 body{
   margin:0;
   font-family:Inter, Arial, sans-serif;
   background:linear-gradient(180deg,#f7fdfb,#fdf3f7);
   padding:40px 24px;
 }
+
 .wrapper{ width:340px; }
+
 .card{
   background:var(--card);
   border-radius:22px;
   padding:26px;
   box-shadow:0 16px 40px rgba(79,209,197,.35);
 }
+
 h1{
   margin:0 0 14px;
   font-size:18px;
   color:#2b6f69;
   text-align:center;
 }
+
 .counter{
   font-size:64px;
   font-weight:900;
   text-align:center;
   color:var(--mint);
 }
+
 .subtitle{
   text-align:center;
   font-size:14px;
   color:var(--muted);
   margin-bottom:8px;
 }
+
+/* relógio */
 .clock{
   display:flex;
   justify-content:center;
@@ -60,6 +68,7 @@ h1{
   0%,50%,100%{opacity:1}
   25%,75%{opacity:.2}
 }
+
 .progress{
   height:12px;
   background:#e3f3f1;
@@ -71,6 +80,7 @@ h1{
   background:linear-gradient(90deg,var(--mint),var(--pink));
   width:0%;
 }
+
 .stats{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -80,6 +90,7 @@ h1{
   margin-top:16px;
   text-align:center;
 }
+
 .last-reset{
   margin-top:14px;
   padding:12px;
@@ -88,6 +99,7 @@ h1{
   font-size:12px;
   color:#356e68;
 }
+
 button{
   width:100%;
   margin-top:20px;
@@ -103,12 +115,13 @@ button{
 </head>
 
 <body>
+
 <div class="wrapper">
 <div class="card">
 
 <h1>💰 Dias sem gastar dinheiro</h1>
 
-<div class="counter" id="counter">5</div>
+<div class="counter" id="counter">0</div>
 <div class="subtitle">dias sem gastar</div>
 
 <div class="clock">
@@ -120,7 +133,7 @@ button{
 <div class="progress"><div id="progressBar"></div></div>
 
 <div class="stats">
-  <div>🏆 Recorde<br><strong id="record">5</strong></div>
+  <div>🏆 Recorde<br><strong id="record">0</strong></div>
   <div>🔁 Resets<br><strong id="resets">0</strong></div>
   <div>📅 Início<br><strong>01/01/2026</strong></div>
   <div>🎯 Meta<br><strong>365</strong></div>
@@ -136,65 +149,63 @@ button{
 </div>
 
 <script>
-const START_DATE = new Date("2026-01-01T00:00:00").getTime();
-const CONFIRMED_DAYS = 5;
+/* CONFIGURAÇÃO */
+const INITIAL_START = new Date("2026-01-01T00:00:00").getTime();
 const GOAL = 365;
 
 const STORAGE = {
   start:"ns_start",
+  inclusive:"ns_inclusive",
   record:"ns_record",
   resets:"ns_resets",
-  last:"ns_last_reset"
+  last:"ns_last",
+  init:"ns_init"
 };
 
-function daysBetween(ms){
-  return Math.floor(ms/(1000*60*60*24));
+/* util */
+const DAY = 86400000;
+const daysBetween = ms => Math.floor(ms / DAY);
+
+/* init seguro */
+function init(){
+  if(localStorage.getItem(STORAGE.init)) return;
+
+  localStorage.setItem(STORAGE.start, INITIAL_START);
+  localStorage.setItem(STORAGE.inclusive, "true"); // contagem inclusiva
+  localStorage.setItem(STORAGE.record, 0);
+  localStorage.setItem(STORAGE.resets, 0);
+  localStorage.setItem(STORAGE.init, "true");
 }
 
-/* inicialização segura */
-function getStart(){
-  let s = localStorage.getItem(STORAGE.start);
-
-  if(!s){
-    const fixedStart = START_DATE - CONFIRMED_DAYS*86400000;
-    localStorage.setItem(STORAGE.start,fixedStart);
-    localStorage.setItem(STORAGE.record,CONFIRMED_DAYS);
-    localStorage.setItem(STORAGE.resets,0);
-    return fixedStart;
-  }
-
-  return Number(s);
-}
-
+/* relógio */
 function updateClock(){
   const n = new Date();
-  hh.innerText = String(n.getHours()).padStart(2,"0");
-  mm.innerText = String(n.getMinutes()).padStart(2,"0");
-  ss.innerText = String(n.getSeconds()).padStart(2,"0");
+  hh.textContent = String(n.getHours()).padStart(2,"0");
+  mm.textContent = String(n.getMinutes()).padStart(2,"0");
+  ss.textContent = String(n.getSeconds()).padStart(2,"0");
 }
 
+/* update principal */
 function update(){
-  const start = getStart();
-  let days = daysBetween(Date.now()-start);
+  const start = Number(localStorage.getItem(STORAGE.start));
+  const inclusive = localStorage.getItem(STORAGE.inclusive) === "true";
 
-  /* correção automática */
-  if(days < CONFIRMED_DAYS && Number(localStorage.getItem(STORAGE.resets)||0) === 0){
-    days = CONFIRMED_DAYS;
-  }
+  let days = daysBetween(Date.now() - start);
+  if(inclusive) days += 1; // <<< CORREÇÃO CHAVE
 
-  counter.innerText = days;
+  counter.textContent = days;
 
-  let record = Number(localStorage.getItem(STORAGE.record)||CONFIRMED_DAYS);
+  let record = Number(localStorage.getItem(STORAGE.record));
   if(days > record){
     record = days;
-    localStorage.setItem(STORAGE.record,record);
+    localStorage.setItem(STORAGE.record, record);
   }
 
-  recordEl.innerText = record;
-  resets.innerText = localStorage.getItem(STORAGE.resets)||0;
+  recordEl.textContent = record;
+  resetsEl.textContent = localStorage.getItem(STORAGE.resets);
 
   progressBar.style.width =
-    Math.min((days/GOAL)*100,100)+"%";
+    Math.min((days / GOAL) * 100, 100) + "%";
 
   const last = localStorage.getItem(STORAGE.last);
   if(last){
@@ -206,41 +217,48 @@ function update(){
   }
 }
 
+/* reset real */
 function panic(){
   const item = prompt("O que você comprou?");
   if(!item) return;
+
   const value = prompt("Qual foi o valor?");
   if(!value) return;
 
   const now = Date.now();
-  localStorage.setItem(STORAGE.start,now);
-  localStorage.setItem(STORAGE.last,JSON.stringify({
-    date:new Date(now).toLocaleDateString("pt-BR"),
-    item:item,
-    value:value
+
+  localStorage.setItem(STORAGE.start, now);
+  localStorage.setItem(STORAGE.inclusive, "false"); // após reset = exclusivo
+  localStorage.setItem(STORAGE.last, JSON.stringify({
+    date: new Date(now).toLocaleDateString("pt-BR"),
+    item,
+    value
   }));
 
-  localStorage.setItem(STORAGE.resets,
-    Number(localStorage.getItem(STORAGE.resets)||0)+1
+  localStorage.setItem(
+    STORAGE.resets,
+    Number(localStorage.getItem(STORAGE.resets)) + 1
   );
 
   update();
 }
 
-/* DOM refs */
+/* DOM */
 const counter = document.getElementById("counter");
 const recordEl = document.getElementById("record");
-const resets = document.getElementById("resets");
+const resetsEl = document.getElementById("resets");
 const progressBar = document.getElementById("progressBar");
 const lastReset = document.getElementById("lastReset");
 const hh = document.getElementById("hh");
 const mm = document.getElementById("mm");
 const ss = document.getElementById("ss");
 
+/* boot */
+init();
 update();
 updateClock();
-setInterval(updateClock,1000);
-setInterval(update,60000);
+setInterval(updateClock, 1000);
+setInterval(update, 60000);
 </script>
 
 </body>
